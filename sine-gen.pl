@@ -8,14 +8,15 @@ use threads::shared;
 
 my $ch;
 my $EXIT = 'E';
-my $freq = 2.6;		## basic frequency
-my $freq2 = 2.85;	## shifted frequency
+my $freq:shared = 2.6;		## basic frequency
+my $freq2:shared = 2.85;	## shifted frequency
 my $shadow = 1.0594;	## twelfth root of 2
-my $duration = 0.5;	## tone duration
-my $guard = 0.5;	## gap between tones
-my $genstate = "OFF";
-my $pumpstate = "OFF";
-my $nothing;
+my $duration:shared = 0.5;	## tone duration
+my $guard:shared = 0.5;	## gap between tones
+my $genstate:shared = "OFF";
+my $pumpstate:shared = "OFF";
+my $runstate:shared = 1;
+my $audio;
 
 sub printscreen() 
 {
@@ -62,16 +63,31 @@ sub printvalues()
 
 }
 
+sub generator()
+{
+    while ($runstate)
+    {
+	if ($genstate eq "ON ") 
+	{
+	    my $command = "play -n synth $duration sin ${freq}k sin ${freq2}k trim 0 $guard";
+	    system $command;
+	}
+    }
+
+}
+
+sub done { $runstate = 0; endwin(); print "@_\n"; $audio->detach(); exit; }
+
+$SIG{INT} = sub { done("Ouch") };
+
+$audio = threads->new('generator');
+
 initscr;
 noecho();
 cbreak();
 nodelay(1);
 curs_set(0);
 
-$SIG{INT} = sub { done("Ouch") };
-sub done { endwin(); print "@_\n"; exit; }
-
-# while (($ch = getch()) ne ERR)
 while (1)
 {
 
@@ -90,6 +106,7 @@ while (1)
 	SWITCH:
 	{
 	if ($ch eq 'E') { done ("Bye"); last SWITCH; }
+	if ($ch eq 'e') { done ("Bye"); last SWITCH; }
 	if ($ch eq 'p') { $freq += 0.001; last SWITCH; }
 	if ($ch eq 'P') { $freq += 0.1; last SWITCH; }
 	if ($ch eq 'l') { $freq -= 0.001; last SWITCH; }
@@ -111,16 +128,10 @@ while (1)
 	if ($ch eq '2') { $genstate = "OFF"; last SWITCH; }
 	if ($ch eq 't') { $pumpstate = "ON "; last SWITCH; }
 	if ($ch eq 'f') { $pumpstate = "OFF"; last SWITCH; }
-	$nothing = 1;
 	}
 
 	$freq2 = $freq * $shadow;
 
-	if ($genstate eq "ON ") 
-	{
-		my @command = split /\s+/,"play -n synth $duration sin ${freq}k sin ${freq2}k >/dev/null &2>1";
-		system (@command);
-	}
 	my ($in, $out) = ('','');
 	vec($in,fileno(STDIN),1) = 1;
 	select ($out= $in,undef,undef,1);
@@ -128,7 +139,3 @@ while (1)
 }
 
 
-
-
-# my $command = "play -n synth $duration sin ${freq}k sin ${freq2}k";
-# system "$command \n";
