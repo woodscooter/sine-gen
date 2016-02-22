@@ -7,12 +7,12 @@ use threads::shared;
 ## Sine wave generator
 
 my $ch;
-my $EXIT = 'E';
 my $freq:shared = 2.6;		## basic frequency
 my $freq2:shared = 2.85;	## shifted frequency
-my $shadow = 1.0594;	## twelfth root of 2
+my $shadow = 1.0594;		## twelfth root of 2
 my $duration:shared = 0.5;	## tone duration
-my $guard:shared = 0.5;	## gap between tones
+my $guard = 0.5;		## required gap between tones
+my $gtime:shared = 0.5;		## calculated gap time
 my $genstate:shared = "OFF";
 my $pumpstate:shared = "OFF";
 my $runstate:shared = 1;
@@ -24,7 +24,7 @@ sub printscreen()
 	printw("Sine Generator Control Screen");
 	move(2,26);
 	printw("-----------------------------");
-	move(12,0);
+	move(12,4);
 	printw("KEYBOARD CONTROL");
 	move(13,4);
 	printw("P/L - inc/dec frequency");
@@ -69,7 +69,8 @@ sub generator()
     {
 	if ($genstate eq "ON ") 
 	{
-	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k trim 0 $guard 2>/dev/null";
+#	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k 2>/dev/null";
+	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k : trim 0 $gtime 2>/dev/null";
 	    system $command;
 	}
     }
@@ -106,7 +107,7 @@ while (1)
 	SWITCH:
 	{
 	if ($ch eq 'E') { done ("Bye"); last SWITCH; }
-	if ($ch eq 'e') { done ("Bye"); last SWITCH; }
+#	if ($ch eq 'e') { done ("Bye"); last SWITCH; }
 	if ($ch eq 'p') { $freq += 0.001; last SWITCH; }
 	if ($ch eq 'P') { $freq += 0.1; last SWITCH; }
 	if ($ch eq 'l') { $freq -= 0.001; last SWITCH; }
@@ -130,7 +131,17 @@ while (1)
 	if ($ch eq 'f') { $pumpstate = "OFF"; last SWITCH; }
 	}
 
+	if ($freq > 10) { $freq = 10; }
+	if ($freq < 0.2) { $freq = 0.2; }
+	if ($duration > 1.5) { $duration = 1.5; }
+	if ($duration < 0.2) { $duration = 0.2; }
+	if ($guard > 1.5) { $guard = 1.5; }
+	if ($guard < 0.2) { $guard = 0.2; }
+	if ($shadow > 2.5) { $shadow = 2.5; }
+	if ($shadow < 0.001) { $shadow = 0.001; }
+
 	$freq2 = $freq * $shadow;
+	$gtime = $guard - 0.18;
 
 	my ($in, $out) = ('','');
 	vec($in,fileno(STDIN),1) = 1;
