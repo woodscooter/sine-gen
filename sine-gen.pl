@@ -69,7 +69,7 @@ sub generator()
     {
 	if ($genstate eq "ON ") 
 	{
-	    my $command = "play -n synth $duration sin ${freq}k sin ${freq2}k trim 0 $guard";
+	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k trim 0 $guard 2>/dev/null";
 	    system $command;
 	}
     }
@@ -83,10 +83,10 @@ $SIG{INT} = sub { done("Ouch") };
 $audio = threads->new('generator');
 
 initscr;
-noecho();
-cbreak();
-nodelay(1);
-curs_set(0);
+noecho();	# characters not echoed by getch
+cbreak();	# characters available when typed (no wait for newline)
+nodelay(1);	# getch() is non-blocking
+curs_set(0);	# non-visible cursor
 
 while (1)
 {
@@ -98,7 +98,7 @@ while (1)
 	addstr($LINES-1, $COLS - 24, scalar localtime);
 	standend();
 
-	move(0,0);
+	move(22,0);
 	refresh();
 
 	$ch = getch();
