@@ -70,7 +70,7 @@ sub generator()
 	if ($genstate eq "ON ") 
 	{
 #	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k 2>/dev/null";
-	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k : trim 0 $gtime 2>/dev/null";
+	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k lowpass 9k : trim 0 $gtime lowpass 1k 2>/dev/null";
 	    system $command;
 	}
     }
