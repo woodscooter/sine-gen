@@ -6,6 +6,7 @@ use threads::shared;
 
 ## Sine wave generator
 ## with continuous tone option
+## sox_kill.sh must be in same directory as this
 
 my $ch;
 my $freq:shared = 2.6;		## basic frequency
@@ -57,14 +58,14 @@ sub printvalues()
 	move(6,10);
 	if ($noguard)
 	{
-	    printw("Duration        continuous");
+	    printw("Duration        continuous        ");
 	} else {
 	    printw("Duration        %f seconds", $duration);
 	}
 	move(7,10);
 	if ($noguard)
 	{
-	    printw("Guard time      %f seconds", 0);
+	    printw("Guard time                        ");
 	} else {
 	    printw("Guard time      %f seconds", $guard);
 	}
@@ -86,7 +87,7 @@ sub generator()
 	    my $command = "play -n -c1 synth $duration sin ${freq}k sin ${freq2}k lowpass 9k : trim 0 $gtime lowpass 1k 2>/dev/null";
 	    if ($noguard)
 	    {
-		$command = "play -n -c1 synth 2.00 sin ${freq}k sin ${freq2}k lowpass 9k 2>/dev/null";
+		$command = "play -n -c1 synth 0 sin ${freq}k sin ${freq2}k lowpass 9k 2>/dev/null";
 	    }
 	    system $command;
 	}
@@ -94,6 +95,13 @@ sub generator()
 }
 
 sub done { $runstate = 0; endwin(); print "@_\n"; $audio->detach(); exit; }
+
+sub sox_end() 
+{
+	my $cmd = "./sox_kill.sh";
+	system $cmd;
+}
+
 
 $SIG{INT} = sub { done("Ouch") };
 
@@ -141,12 +149,12 @@ while (1)
 	if ($ch eq 'h') { $shadow -= 0.001; last SWITCH; }
 	if ($ch eq 'H') { $shadow -= 0.1; last SWITCH; }
 	if ($ch eq 'r') { $shadow = 1.0594; last SWITCH; }
-	if ($ch eq 'y') { $noguard = 0; last SWITCH; }
-	if ($ch eq 'Y') { $noguard = 0; last SWITCH; }
+	if ($ch eq 'y') { $noguard = 0; sox_end(); last SWITCH; }
+	if ($ch eq 'Y') { $noguard = 0; sox_end(); last SWITCH; }
 	if ($ch eq 'g') { $noguard = 1; last SWITCH; }
 	if ($ch eq 'G') { $noguard = 1; last SWITCH; }
 	if ($ch eq '1') { $genstate = "ON "; last SWITCH; }
-	if ($ch eq '2') { $genstate = "OFF"; last SWITCH; }
+	if ($ch eq '2') { $genstate = "OFF"; if ($noguard) { sox_end(); } last SWITCH; }
 	if ($ch eq 't') { $pumpstate = "ON "; last SWITCH; }
 	if ($ch eq 'f') { $pumpstate = "OFF"; last SWITCH; }
 	}
