@@ -3,10 +3,12 @@ use strict;
 use Curses;
 use threads;
 use threads::shared;
+use RPi::GPIO;
 
 ## Sine wave generator
 ## with continuous tone option
 ## sox_kill.sh must be in same directory as this
+## Now with pump control
 
 my $ch;
 my $freq:shared = 2.6;		## basic frequency
@@ -20,6 +22,8 @@ my $pumpstate:shared = "OFF";
 my $noguard:shared = 0;		## set to 1 for continuous run
 my $runstate:shared = 1;
 my $audio;
+my $gpio = RPi::GPIO->new(MODE => 'BCM');
+my $PUMP = 24;			## Broadcom GPIO24 on pin 18
 
 sub printscreen() 
 {
@@ -94,7 +98,16 @@ sub generator()
     }
 }
 
-sub done { $runstate = 0; endwin(); print "@_\n"; $audio->detach(); exit; }
+sub done 
+{ 
+    $runstate = 0; 
+    $pumpstate = 'OFF';
+    setpump();
+    sox_end();
+    endwin(); 
+    print "@_\n"; 
+    $audio->detach(); 
+    exit; }
 
 sub sox_end() 
 {
@@ -102,16 +115,30 @@ sub sox_end()
 	system $cmd;
 }
 
+sub setpump()
+{
+	if ($pumpstate eq 'OFF')
+	{
+	    gpio->output($PUMP,0);
+	}
+	else if ($pumpstate eq 'ON')
+	{
+	    gpio->output($PUMP,1);
+	}
+}
+
 
 $SIG{INT} = sub { done("Ouch") };
 
 $audio = threads->new('generator');
+$gpio->setup($PUMP,'OUT');
 
 initscr;
 noecho();	# characters not echoed by getch
 cbreak();	# characters available when typed (no wait for newline)
 nodelay(1);	# getch() is non-blocking
 curs_set(0);	# non-visible cursor
+setpump();	# initially off
 
 while (1)
 {
@@ -155,8 +182,8 @@ while (1)
 	if ($ch eq 'G') { $noguard = 1; last SWITCH; }
 	if ($ch eq '1') { $genstate = "ON "; last SWITCH; }
 	if ($ch eq '2') { $genstate = "OFF"; if ($noguard) { sox_end(); } last SWITCH; }
-	if ($ch eq 't') { $pumpstate = "ON "; last SWITCH; }
-	if ($ch eq 'f') { $pumpstate = "OFF"; last SWITCH; }
+	if ($ch eq 't') { $pumpstate = "ON "; setpump(); last SWITCH; }
+	if ($ch eq 'f') { $pumpstate = "OFF"; setpump(); last SWITCH; }
 	}
 
 	if ($freq > 10) { $freq = 10; }
