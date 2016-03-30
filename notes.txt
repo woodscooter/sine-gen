@@ -1,0 +1,7 @@
+to get the RPi::GPIO module, you have to
+git clone https://github.com/ItsOnlyBinary/perl-rpi-gpio
+then go into perl-rpi-gpio/lib/ and copy RPi/GPIO.pm to
+/usr/local/share/perl/5.14.2/, or to 
+/usr/local/lib/site_perl/
+
+just so long as it's on the @INC path and perl can find it.
