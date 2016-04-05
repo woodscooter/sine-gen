@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w -d
+#!/usr/bin/perl -w 
 use strict;
 use Curses;
 use threads;
@@ -25,7 +25,8 @@ my $noguard:shared = 0;		## set to 1 for continuous run
 my $runstate:shared = 1;
 my $audio;
 my $gpio;
-my $PUMP = 24;			## Broadcom GPIO24 on pin 18
+## my $PUMP = 24;			## Broadcom GPIO24 on pin 18
+my $PUMP = 12;	## GPIO12, pin 32.  Avoid pin18 on my pi, it's used for something else
 
 sub printscreen() 
 {
@@ -176,15 +177,15 @@ print "Hello?";
 while (1)
 {
 
-##	printscreen();
-##	printvalues();
+	printscreen();
+	printvalues();
 
-##	standout();
-##	addstr($LINES-1, $COLS - 24, scalar localtime);
-##	standend();
+	standout();
+	addstr($LINES-1, $COLS - 24, scalar localtime);
+	standend();
 
 	move(22,0);
-##	refresh();
+	refresh();
 
 	$ch = getch();
 
