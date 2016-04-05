@@ -119,11 +119,11 @@ sub setpump()
 {
 	if ($pumpstate eq 'OFF')
 	{
-	    gpio->output($PUMP,0);
+	    $gpio->output($PUMP,0);
 	}
-	else if ($pumpstate eq 'ON')
+	if ($pumpstate eq 'ON')
 	{
-	    gpio->output($PUMP,1);
+	    $gpio->output($PUMP,1);
 	}
 }
 
