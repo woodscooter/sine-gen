@@ -1,14 +1,14 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -w -d
 use strict;
 use Curses;
 use threads;
 use threads::shared;
-use RPi::GPIO;
 
 ## Sine wave generator
 ## with continuous tone option
 ## sox_kill.sh must be in same directory as this
 ## Now with pump control
+## requires pigpio daemon running
 
 my $ch;
 my $freq:shared = 2.6;		## basic frequency
@@ -17,12 +17,14 @@ my $shadow = 1.0594;		## twelfth root of 2
 my $duration:shared = 0.5;	## tone duration
 my $guard = 0.5;		## required gap between tones
 my $gtime:shared = 0.5;		## calculated gap time
+my $pumprun:shared = 3;		## pump run time, when on
+my $pumpstop :shared= 10;	## pump pause time, when on
 my $genstate:shared = "OFF";
-my $pumpstate:shared = "OFF";
+my $pumpstate:shared = "ON";
 my $noguard:shared = 0;		## set to 1 for continuous run
 my $runstate:shared = 1;
 my $audio;
-my $gpio = RPi::GPIO->new(MODE => 'BCM');
+my $gpio;
 my $PUMP = 24;			## Broadcom GPIO24 on pin 18
 
 sub printscreen() 
@@ -101,12 +103,11 @@ sub generator()
 sub done 
 { 
     $runstate = 0; 
-    $pumpstate = 'OFF';
-    setpump();
     sox_end();
     endwin(); 
     print "@_\n"; 
     $audio->detach(); 
+    $gpio->detach();
     exit; }
 
 sub sox_end() 
@@ -117,41 +118,73 @@ sub sox_end()
 
 sub setpump()
 {
+my $pumpcmd;
+my $pumpcount;
+my $sleepcmd = "pigs mils 333";
+
+    $pumpcmd = "pigs modes $PUMP W";	## Set output mode
+    system $pumpcmd;
+
+    while ($runstate)
+    {
 	if ($pumpstate eq 'OFF')
 	{
-	    $gpio->output($PUMP,0);
+	    $pumpcmd = "pigs w $PUMP 0";
+	    system $pumpcmd;
+	    system $sleepcmd;
 	}
-	if ($pumpstate eq 'ON')
+	elsif ($pumpstate eq 'ON')
 	{
-	    $gpio->output($PUMP,1);
+	    $pumpcmd = "pigs w $PUMP 1";
+	    system $pumpcmd;
+	    $pumpcount = int ($pumprun *1000/333);
+	    while  ($pumpcount)
+	    {
+		last if (!$runstate) ;
+		last if ($pumpstate eq 'OFF') ;
+		system $sleepcmd;
+		--$pumpcount;
+	    }
+	    $pumpcmd = "pigs w $PUMP 0";
+	    system $pumpcmd;
+	    $pumpcount = int ($pumpstop *1000/333);
+	    while  ($pumpcount)
+	    {
+		last if (!$runstate) ;
+		last if ($pumpstate eq 'OFF') ;
+		system $sleepcmd;
+		--$pumpcount;
+	    }
 	}
+    }
 }
 
 
 $SIG{INT} = sub { done("Ouch") };
 
 $audio = threads->new('generator');
-$gpio->setup($PUMP,'OUT');
+$gpio = threads->new('setpump');
 
 initscr;
 noecho();	# characters not echoed by getch
 cbreak();	# characters available when typed (no wait for newline)
 nodelay(1);	# getch() is non-blocking
 curs_set(0);	# non-visible cursor
-setpump();	# initially off
+
+print "Hello?";
 
 while (1)
 {
 
-	printscreen();
-	printvalues();
+##	printscreen();
+##	printvalues();
 
-	standout();
-	addstr($LINES-1, $COLS - 24, scalar localtime);
-	standend();
+##	standout();
+##	addstr($LINES-1, $COLS - 24, scalar localtime);
+##	standend();
 
 	move(22,0);
-	refresh();
+##	refresh();
 
 	$ch = getch();
 
