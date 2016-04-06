@@ -123,6 +123,7 @@ sub sox_end()
 	system $cmd;
 }
 
+
 sub setpump()
 {
 my $pumpcmd;
