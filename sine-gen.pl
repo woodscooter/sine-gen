@@ -25,8 +25,7 @@ my $noguard:shared = 0;		## set to 1 for continuous run
 my $runstate:shared = 1;
 my $audio;
 my $gpio;
-## my $PUMP = 24;			## Broadcom GPIO24 on pin 18
-my $PUMP = 12;	## GPIO12, pin 32.  Avoid pin18 on my pi, it's used for something else
+my $PUMP = 15;	## GPIO15, pin 10.
 
 sub printscreen() 
 {
@@ -48,7 +47,7 @@ sub printscreen()
 	move(13,35);
 	printw("U/H - inc/dec ratio");
 	move(14,35);
-	printw(" R  - Reset ratio");
+	printw(" A  - Reset ratio");
 	move(15,35);
 	printw("R/D - inc/dec pump run time");
 	move(16,35);
@@ -141,7 +140,7 @@ my $sleepcmd = "pigs mils 333";
 	    system $pumpcmd;
 	    system $sleepcmd;
 	}
-	elsif ($pumpstate eq 'ON')
+	else 
 	{
 	    $pumpcmd = "pigs w $PUMP 1";
 	    system $pumpcmd;
@@ -164,6 +163,7 @@ my $sleepcmd = "pigs mils 333";
 		--$pumpcount;
 	    }
 	}
+	system $sleepcmd;
     }
 }
 
@@ -178,8 +178,6 @@ noecho();	# characters not echoed by getch
 cbreak();	# characters available when typed (no wait for newline)
 nodelay(1);	# getch() is non-blocking
 curs_set(0);	# non-visible cursor
-
-print "Hello?";
 
 while (1)
 {
@@ -216,7 +214,8 @@ while (1)
 	if ($ch eq 'U') { $shadow += 0.1; last SWITCH; }
 	if ($ch eq 'h') { $shadow -= 0.001; last SWITCH; }
 	if ($ch eq 'H') { $shadow -= 0.1; last SWITCH; }
-	if ($ch eq 'r') { $shadow = 1.0594; last SWITCH; }
+	if ($ch eq 'a') { $shadow = 1.0594; last SWITCH; }
+	if ($ch eq 'A') { $shadow = 1.0594; last SWITCH; }
 	if ($ch eq 'R') { ++$pumprun; last SWITCH; }
 	if ($ch eq 'r') { ++$pumprun; last SWITCH; }
 	if ($ch eq 'D') { --$pumprun; last SWITCH; }
@@ -231,8 +230,10 @@ while (1)
 	if ($ch eq 'G') { $noguard = 1; last SWITCH; }
 	if ($ch eq '1') { $genstate = "ON "; last SWITCH; }
 	if ($ch eq '2') { $genstate = "OFF"; if ($noguard) { sox_end(); } last SWITCH; }
-	if ($ch eq 't') { $pumpstate = "ON "; setpump(); last SWITCH; }
-	if ($ch eq 'f') { $pumpstate = "OFF"; setpump(); last SWITCH; }
+	if ($ch eq 't') { $pumpstate = "ON "; last SWITCH; }
+	if ($ch eq 'T') { $pumpstate = "ON "; last SWITCH; }
+	if ($ch eq 'f') { $pumpstate = "OFF"; last SWITCH; }
+	if ($ch eq 'F') { $pumpstate = "OFF"; last SWITCH; }
 	}
 
 	if ($freq > 10) { $freq = 10; }
